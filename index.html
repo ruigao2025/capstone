@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>张隐韬 · 革命者年谱</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0e17;--card:#111827;--border:#1f2937;--text:#e5e7eb;
+--dim:#6b7280;--accent:#f0a500;--red:#ef4444;--green:#22c55e;
+--border-light:#374151;--glass:rgba(17,24,39,.85);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Serif SC',serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+/* ─── hero ─── */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:2rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 80%,rgba(240,165,0,.08) 0%,transparent 60%)}
+.hero-years{font-size:.85rem;color:var(--accent);letter-spacing:.5em;font-weight:300;margin-bottom:1rem}
+.hero h1{font-size:clamp(2.4rem,6vw,4.2rem);font-weight:900;letter-spacing:.15em;line-height:1.2;margin-bottom:.5rem}
+.hero .h1-sub{font-size:clamp(1rem,2.5vw,1.3rem);font-weight:300;color:var(--dim);letter-spacing:.3em;margin-bottom:2rem}
+.hero-quote{max-width:560px;font-size:.92rem;line-height:2;color:#9ca3af;font-style:italic;border-left:2px solid var(--accent);padding-left:1.2rem;text-align:left;margin-bottom:3rem}
+.hero-quote cite{display:block;font-style:normal;font-size:.75rem;color:var(--dim);margin-top:.5rem}
+.scroll-hint{animation:float 2.5s ease-in-out infinite;color:var(--dim);font-size:.75rem;letter-spacing:.2em}
+.scroll-hint svg{display:block;margin:8px auto 0;width:20px;height:20px;stroke:var(--dim);stroke-width:1.5;fill:none}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ─── timeline section ─── */
+.section{max-width:1200px;margin:0 auto;padding:4rem 1.5rem}
+.section-title{text-align:center;margin-bottom:3rem}
+.section-title h2{font-size:1.6rem;font-weight:700;letter-spacing:.1em;position:relative;display:inline-block}
+.section-title h2::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:40px;height:2px;background:var(--accent)}
+.section-title p{font-size:.8rem;color:var(--dim);margin-top:1rem;letter-spacing:.05em}
+
+/* ─── timeline ─── */
+.tl-container{position:relative;padding:2rem 0}
+.tl-line{position:absolute;left:28px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;padding:0 0 2.5rem 70px;cursor:pointer}
+.tl-item:last-child{padding-bottom:0}
+.tl-dot{position:absolute;left:21px;top:4px;width:16px;height:16px;border-radius:50%;border:3px solid;background:var(--bg);z-index:2;transition:all .3s}
+.tl-item:hover .tl-dot,.tl-item.active .tl-dot{transform:scale(1.4);box-shadow:0 0 0 4px currentColor,0 0 20px currentColor}
+.tl-date{font-size:.72rem;font-family:'JetBrains Mono',monospace,serif;color:var(--dim);margin-bottom:.35rem;transition:color .3s}
+.tl-item:hover .tl-date{color:var(--accent)}
+.tl-title{font-size:1.05rem;font-weight:600;line-height:1.5;margin-bottom:.4rem;transition:color .3s}
+.tl-item:hover .tl-title{color:var(--accent)}
+.tl-type{display:inline-block;font-size:.58rem;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;font-weight:400}
+.tl-loc{font-size:.72rem;color:var(--dim);display:flex;align-items:center;gap:3px;margin-bottom:.5rem}
+.tl-expand{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.tl-item.active .tl-expand{max-height:600px}
+.tl-expand-inner{padding:1rem 0 0;font-size:.82rem;line-height:1.9;color:#9ca3af}
+.tl-expand-inner p{text-indent:2em;margin-bottom:.6rem}
+.tl-source{font-size:.65rem;color:#4b5563;padding-top:.5rem;border-top:1px dashed var(--border);display:flex;align-items:flex-start;gap:4px}
+.type-revolution .tl-dot{border-color:var(--red);color:var(--red)}
+.type-revolution .tl-type{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.type-history .tl-dot{border-color:#eab308;color:#eab308}
+.type-history .tl-type{background:rgba(234,179,8,.1);color:#eab308;border:1px solid rgba(234,179,8,.25)}
+.type-opinion .tl-dot{border-color:#a78bfa;color:#a78bfa}
+.type-opinion .tl-type{background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.25)}
+.type-diary .tl-dot{border-color:var(--green);color:var(--green)}
+.type-diary .tl-type{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.type-life .tl-dot{border-color:#38bdf8;color:#38bdf8}
+.type-life .tl-type{background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.25)}
+
+/* ─── map ─── */
+.map-section{padding:0 1.5rem 4rem;max-width:1200px;margin:0 auto}
+#map{height:380px;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.leaflet-container{background:var(--bg)!important;font-family:'Noto Serif SC',serif!important}
+.leaflet-popup-content-wrapper{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.5)!important}
+.leaflet-popup-tip{background:var(--card)!important}
+.leaflet-popup-content{font-size:.8rem!important;line-height:1.5!important}
+.leaflet-popup-content b{color:var(--accent)}
+.leaflet-popup-content .pop-type{display:inline-block;font-size:.58rem;padding:1px 7px;border-radius:8px;margin-left:4px}
+.map-legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+.map-legend span{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--dim)}
+.map-legend .ml-dot{width:8px;height:8px;border-radius:50%}
+
+/* ─── footer ─── */
+.footer{text-align:center;padding:3rem 1.5rem;border-top:1px solid var(--border);margin-top:2rem}
+.footer p{font-size:.7rem;color:var(--dim);line-height:1.8}
+
+/* ─── responsive ─── */
+@media(max-width:640px){
+  .hero h1{font-size:2rem}
+  .hero .h1-sub{font-size:.85rem;letter-spacing:.15em}
+  .hero-quote{font-size:.82rem}
+  .tl-item{padding-left:50px}
+  .tl-dot{left:14px;width:14px;height:14px;border-width:2.5px}
+  .tl-line{left:20px}
+  #map{height:260px}
+}
+
+/* ─── smooth reveal ─── */
+.tl-item{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s}
+.tl-item.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-years">1902 — 1926</div>
+  <h1>张隐韬</h1>
+  <div class="h1-sub">革命者 · 黄埔一期生 · 津南农民自卫军司令</div>
+  <blockquote class="hero-quote">
+    要作我的那个伟大的一劳永逸的运动……决定以彻底的革命改造社会。
+    <cite>— 《张隐韬烈士日记》1924年7月</cite>
+  </blockquote>
+  <div class="scroll-hint">向下浏览<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+</div>
+
+<div class="section" id="timeline">
+  <div class="section-title">
+    <h2>生平纪事</h2>
+    <p>点击事件节点展开详情 · 含史料出处</p>
+  </div>
+  <div class="tl-container" id="tlContainer">
+    <div class="tl-line"></div>
+  </div>
+</div>
+
+<div class="map-section" id="mapSection">
+  <div class="section-title">
+    <h2>活动轨迹</h2>
+    <p>地图标注张隐韬主要的革命活动地点</p>
+  </div>
+  <div id="map"></div>
+  <div class="map-legend">
+    <span><div class="ml-dot" style="background:#ef4444"></div>革命活动</span>
+    <span><div class="ml-dot" style="background:#4caf50"></div>日记记录</span>
+    <span><div class="ml-dot" style="background:#a78bfa"></div>思想观点</span>
+    <span><div class="ml-dot" style="background:#eab308"></div>历史事件</span>
+    <span><div class="ml-dot" style="background:#38bdf8"></div>个人生活</span>
+  </div>
+</div>
+
+<div class="footer">
+  <p>史料来源：《张隐韬烈士日记》连载（一）—（五）·《历史档案》1989年 · 河北省南皮县档案馆<br>
+  《一名共产党员学生眼中的黄埔军校——以〈张隐韬日记〉为中心的考察》石慧 · 2024<br>
+  《关于张隐韬生平事迹的几则新材料》张洪涛 · 2025 ·《党史博采》</p>
+</div>
+
+<script>
+const DATA=[
+{date:"1922",sub:"春",title:"加入中国共产党",type:"revolution",loc:"天津",co:[39.13,117.20],
+text:"由中国劳动组合书记部北方分部书记罗章龙和天津总工会负责人安幸生介绍入党，同时为北方劳动组合书记部成员。",
+src:"《张隐韬烈士日记综述》"},
+{date:"1922",sub:"6月",title:"创办五五书报代卖社",type:"revolution",loc:"天津河北宇纬路",co:[39.15,117.19],
+text:"在天津开办\"五五书报代卖社\"，附设于工余补习学校内。以马克思诞辰纪念日命名，任主任，于树德任副主任。章程规定盈余半充劳动运动费。",
+src:"《关于张隐韬生平事迹的几则新材料》；1922年6月12日《上海民国日报》"},
+{date:"1922",sub:"10月",title:"参加废督裁兵大会",type:"revolution",loc:"北京天安门",co:[39.91,116.40],
+text:"以\"长辛店工人代表张仁超\"名义参加天安门八万余人国民裁兵动员大会并演说，呼吁"工人欲求自由，故工人始终抱定一奋斗之精神"。",
+src:"《关于张隐韬生平事迹的几则新材料》；1922年10月12日《民本报》"},
+{date:"1922",sub:"10—11月",title:"领导开滦五矿及正太铁路罢工",type:"revolution",loc:"唐山/石家庄",co:[38.9,116.5],
+text:"与罗章龙、王尽美、邓培等组织领导唐山开滦五矿工人罢工；与张昆弟、孙云鹏等领导正太铁路工人罢工。",
+src:"《张隐韬烈士日记综述》"},
+{date:"1923",sub:"2月",title:"参加京汉铁路二七大罢工",type:"history",loc:"京汉铁路沿线",co:[38.04,114.51],
+text:"随罗章龙参加京汉铁路工人\"二七\"大罢工。日记中记载京绥路被波及，七人被捕，"工运遭遇重大打击"。",
+src:"《张隐韬烈士日记综述》；日记连载(五)"},
+{date:"1923",sub:"8月1日",title:"日记第一册起记",type:"diary",loc:"北京北长街喇嘛寺",co:[39.91,116.40],
+text:"自序于北京北长街喇嘛寺：\"日记，是人生在世上作事不可缺少的东西。社会的变向，潮流的趋势，都是日新月异不住的更动。\"决心\"破釜沉舟的干点工作\"。",
+src:"《张隐韬烈士日记》连载(一)"},
+{date:"1923",sub:"9月1日",title:"欢迎苏俄代表加拉罕",type:"history",loc:"北京",co:[39.91,116.40],
+text:"苏俄代表加拉罕抵京，结队欢迎者十余团体，书\"希望中俄本互助精神实现东亚和平\"等标语。张记：\"吾知东亚及世界之和平，将不久而突于实现也。\"",
+src:"《张隐韬烈士日记》连载(一)"},
+{date:"1924",sub:"1月26日",title:"列宁遥祭大会",type:"history",loc:"北京大学第三院",co:[39.99,116.31],
+text:"与同志等拟在北大第三院开列宁遥祭大会。到会千余人，加拉罕讲演苏俄近日内部坚固情形。",
+src:"《张隐韬烈士日记》连载(二)"},
+{date:"1924",sub:"2月14日",title:"抵上海投考黄埔军校",type:"revolution",loc:"上海环龙路",co:[31.23,121.47],
+text:"到达上海后即赴环龙路国民党执行部。毛泽东告知\"已考过一次，须暂待两日\"。经济极度困难，每餐仅铜元十余枚。",
+src:"《张隐韬烈士日记》连载(三)；《一名共产党员学生眼中的黄埔军校》石慧"},
+{date:"1924",sub:"4月28日",title:"考入黄埔军校第一期",type:"revolution",loc:"广州黄埔",co:[23.09,113.42],
+text:"经两次考试录取，编入第二队。与左权、徐向前、陈赓、胡宗南等同为第一期同学。毛泽东亲自面谈应试。",
+src:"《一名共产党员学生眼中的黄埔军校》石慧"},
+{date:"1924",sub:"6月25日",title:"日记第三册起记·批评蒋介石专制",type:"opinion",loc:"广州黄埔",co:[23.09,113.42],
+text:"下级干部因要求加薪被免职，队长吕梦熊遭除名永除党籍。张写道：\"此学校之中发生此等压迫不平之事，真是为人争自由、为人民争平等的革命党的怪闻。\"",
+src:"《张隐韬烈士日记》连载(四)"},
+{date:"1924",sub:"8月17日",title:"晤张继·批评国民党右派",type:"opinion",loc:"广州",co:[23.13,113.26],
+text:"晋省晤于树德、张继等。张继（右派首领）大谈\"对俄应持之方针\"及\"党内暗潮\"。于树德告诫：\"你无论若何不必抱悲观。\"",
+src:"《张隐韬烈士日记》连载(五)"},
+{date:"1924",sub:"8月12—13日",title:"参加扣械案搬运军火",type:"history",loc:"广州黄埔",co:[23.09,113.42],
+text:"黄埔学生紧急搬运扣留商团军火：步枪4500余支、手机关百架、子弹300万发。夜间警戒口令\"得威必胜\"。张记：\"国民党得这大批军火，诚是前途的幸事。\"",
+src:"《张隐韬烈士日记》连载(五)"},
+{date:"1924",sub:"8—9月",title:"批评商团事件与孙中山妥协",type:"opinion",loc:"广州黄埔",co:[23.09,113.42],
+text:"批评孙中山\"妥协性太甚\"，主张\"明明白白表明态度代表无产者，与此麻木不仁的资本家决战，以完成一劳永逸的彻底革命\"。右派出《护党特刊》攻击共产党，张将之寄于树德请提抗议。",
+src:"《张隐韬烈士日记》连载(五)"},
+{date:"1924",sub:"10月20日",title:"提出军事运动分工案",type:"revolution",loc:"广州",co:[23.13,113.26],
+text:"在国民党中央执行委员会第五十六次会议上提出\"军事运动的分工案\"。",
+src:"《关于张隐韬生平事迹的几则新材料》；1924年10月27日《广州民国日报》"},
+{date:"1925",sub:"11月",title:"成立津南农民自卫军",type:"revolution",loc:"河北泊镇",co:[38.07,116.58],
+text:"黄埔军校毕业后受党派遣到河南国民二军做兵运工作。在泊镇宣布成立\"津南农民自卫军\"，任司令兼党代表，队伍发展到1200人，占领南皮、盐山、庆云等县城。",
+src:"《张隐韬烈士日记综述》"},
+{date:"1926",sub:"1月24日",title:"发表农民自卫军宣言",type:"revolution",loc:"河北盐山旧县镇",co:[38.05,117.25],
+text:"以\"沧南盐庆农民自卫军\"名义向全国发\"快邮代电\"宣言，军长陈秀福，副军长张隐韬。宣言痛陈农民遭受兵匪之苦，号召武装自卫。刊于天津、北京《益世报》。",
+src:"《关于张隐韬生平事迹的几则新材料》；1926年1月24日《益世报》"},
+{date:"1926",sub:"2月",title:"英勇就义",type:"life",loc:"河北盐山旧县镇",co:[38.05,117.25],
+text:"农民自卫军遭国民二军弓富魁旅截击，张隐韬不幸被俘。腊月二十三日被害于盐山县旧县镇北门外，年仅24岁。",
+src:"《张隐韬烈士日记综述》"}
+];
+
+const COLORS={revolution:'#ef4444',diary:'#4caf50',opinion:'#a78bfa',history:'#eab308',life:'#38bdf8'};
+const LABELS={revolution:'革命活动',diary:'日记记录',opinion:'思想观点',history:'历史事件',life:'个人生活'};
+
+/* ─── build timeline ─── */
+const container=document.getElementById('tlContainer');
+DATA.forEach((d,i)=>{
+  const el=document.createElement('div');
+  el.className=`tl-item type-${d.type}`;
+  const ds=d.sub?`${d.date}年${d.sub}`:`${d.date}年`;
+  el.innerHTML=`
+    <div class="tl-dot"></div>
+    <div class="tl-date">${ds}</div>
+    <div class="tl-title">${d.title}<span class="tl-type">${LABELS[d.type]}</span></div>
+    <div class="tl-loc">📍 ${d.loc}</div>
+    <div class="tl-expand"><div class="tl-expand-inner">
+      <p>${d.text}</p>
+      <div class="tl-source">📚 ${d.src}</div>
+    </div></div>`;
+  el.addEventListener('click',()=>{
+    const wasActive=el.classList.contains('active');
+    container.querySelectorAll('.tl-item').forEach(x=>x.classList.remove('active'));
+    if(!wasActive){el.classList.add('active');if(d.co)mp.flyTo(d.co,7,{duration:.6})}
+  });
+  container.appendChild(el);
+});
+
+/* ─── reveal animation ─── */
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:.15});
+container.querySelectorAll('.tl-item').forEach(el=>observer.observe(el));
+
+/* ─── map ─── */
+const mp=L.map('map',{attributionControl:false,zoomControl:true}).setView([34,112],5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(mp);
+
+DATA.forEach((d,i)=>{
+  if(!d.co)return;
+  const c=COLORS[d.type]||'#8b949e';
+  const ds=d.sub?`${d.date}年${d.sub}`:`${d.date}年`;
+  L.marker(d.co,{icon:L.divIcon({className:'',iconSize:[14,14],iconAnchor:[7,7],
+    html:`<div style="width:14px;height:14px;border-radius:50%;background:${c};border:2px solid rgba(255,255,255,.4);box-shadow:0 0 8px ${c}60"></div>`
+  })}).addTo(mp).bindPopup(`<b style="color:${c}">${d.title}</b><br><span style="font-size:.7rem;color:#888">${ds}</span><br><span style="font-size:.65rem;color:#aaa">📍 ${d.loc}</span>`);
+});
+
+/* ─── auto-shrink hero ─── */
+let shrinkDone=false;
+window.addEventListener('scroll',()=>{
+  if(!shrinkDone&&window.scrollY>100){
+    const hero=document.querySelector('.hero');
+    hero.style.minHeight='0';
+    hero.style.padding='2rem';
+    hero.style.maxHeight='80vh';
+    shrinkDone=true;
+  }
+});
+</script>
+</body>
+</html>
